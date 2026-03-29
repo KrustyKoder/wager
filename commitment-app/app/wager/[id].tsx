@@ -40,7 +40,7 @@ export function WagerDetailScreen() {
 
   useEffect(() => {
     fetchWagerById(id).then(setWager)
-  }, [id])
+  }, [id, fetchWagerById])
 
   async function handleChooseFile() {
     setPicking(true)

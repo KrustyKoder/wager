@@ -70,7 +70,7 @@ export default function WagerPage() {
   useFocusEffect(
     useCallback(() => {
       fetchWagers()
-    }, [])
+    }, [fetchWagers])
   )
 
   return (
