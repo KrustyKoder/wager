@@ -6,6 +6,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated'
 import { router } from 'expo-router'
 import { useFocusEffect } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -19,7 +24,13 @@ function EmptyState() {
   )
 }
 
-function WagerItem({ wager }: { wager: Wager }) {
+function WagerCard({ wager }: { wager: Wager }) {
+  const scale = useSharedValue(1)
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }))
+
   const deadline = new Date(wager.deadline).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -27,13 +38,21 @@ function WagerItem({ wager }: { wager: Wager }) {
   })
 
   return (
-    <View style={styles.wagerItem}>
-      <View style={styles.wagerRow}>
-        <Text style={styles.wagerTitle}>{wager.title}</Text>
-        <Text style={styles.wagerAmount}>${wager.amount}</Text>
-      </View>
-      <Text style={styles.wagerMeta}>Due {deadline} · {wager.status}</Text>
-    </View>
+    <Animated.View style={[styles.cardShadow, animatedStyle]}>
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={1}
+        onPressIn={() => { scale.value = withSpring(0.97, { damping: 15, stiffness: 300 }) }}
+        onPressOut={() => { scale.value = withSpring(1, { damping: 15, stiffness: 300 }) }}
+        onPress={() => router.push(`/wager/${wager.id}`)}
+      >
+        <View style={styles.cardRow}>
+          <Text style={styles.wagerTitle}>{wager.title}</Text>
+          <Text style={styles.wagerAmount}>£{wager.amount}</Text>
+        </View>
+        <Text style={styles.wagerMeta}>Due {deadline} · {wager.status}</Text>
+      </TouchableOpacity>
+    </Animated.View>
   )
 }
 
@@ -56,7 +75,7 @@ export default function WagerPage() {
       <FlatList
         data={wagers}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <WagerItem wager={item} />}
+        renderItem={({ item }) => <WagerCard wager={item} />}
         ListEmptyComponent={<EmptyState />}
         contentContainerStyle={styles.listContent}
       />
@@ -90,6 +109,8 @@ const styles = StyleSheet.create({
   listContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
+    paddingTop: 8,
+    gap: 12,
   },
   emptyContainer: {
     flex: 1,
@@ -101,13 +122,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#999999',
   },
-  wagerItem: {
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    gap: 4,
+  cardShadow: {
+    borderRadius: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  wagerRow: {
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+    borderBottomWidth: 3,
+    borderBottomColor: '#e0e0e0',
+    gap: 6,
+  },
+  cardRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -116,10 +150,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#000000',
+    flex: 1,
   },
   wagerAmount: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#000000',
   },
   wagerMeta: {

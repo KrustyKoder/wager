@@ -110,5 +110,25 @@ export function useWager() {
     return true
   }
 
-  return { wagers, fetchWagers, createWager, loading, error }
+  async function fetchWagerById(id: string): Promise<Wager | null> {
+    setLoading(true)
+    setError(null)
+
+    const { data, error: fetchError } = await supabase
+      .from('wagers')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    setLoading(false)
+
+    if (fetchError) {
+      setError(fetchError.message)
+      return null
+    }
+
+    return data
+  }
+
+  return { wagers, fetchWagers, fetchWagerById, createWager, loading, error }
 }
