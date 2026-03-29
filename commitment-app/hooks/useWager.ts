@@ -34,6 +34,16 @@ export function useWager() {
 
     const { data: { session } } = await supabase.auth.getSession()
 
+    // Mark any pending wagers past their deadline as lost
+    const startOfToday = new Date()
+    startOfToday.setHours(0, 0, 0, 0)
+    await supabase
+      .from('wagers')
+      .update({ status: 'lost' })
+      .eq('user_id', session?.user.id)
+      .eq('status', 'pending')
+      .lt('deadline', startOfToday.toISOString())
+
     const { data, error: fetchError } = await supabase
       .from('wagers')
       .select('*')
@@ -130,5 +140,14 @@ export function useWager() {
     return data
   }
 
-  return { wagers, fetchWagers, fetchWagerById, createWager, loading, error }
+  async function deleteWager(id: string): Promise<boolean> {
+    const { error: deleteError } = await supabase.from('wagers').delete().eq('id', id)
+    if (deleteError) {
+      setError(deleteError.message)
+      return false
+    }
+    return true
+  }
+
+  return { wagers, fetchWagers, fetchWagerById, createWager, deleteWager, loading, error }
 }

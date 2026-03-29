@@ -37,10 +37,17 @@ function WagerCard({ wager }: { wager: Wager }) {
     year: 'numeric',
   })
 
+  const isWon = wager.status === 'won'
+  const isLost = wager.status === 'lost'
+
   return (
     <Animated.View style={[styles.cardShadow, animatedStyle]}>
       <TouchableOpacity
-        style={styles.card}
+        style={[
+          styles.card,
+          isWon && styles.cardWon,
+          isLost && styles.cardLost,
+        ]}
         activeOpacity={1}
         onPressIn={() => { scale.value = withSpring(0.97, { damping: 15, stiffness: 300 }) }}
         onPressOut={() => { scale.value = withSpring(1, { damping: 15, stiffness: 300 }) }}
@@ -140,6 +147,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: 3,
     borderBottomColor: '#e0e0e0',
     gap: 6,
+  },
+  cardWon: {
+    backgroundColor: '#f0faf0',
+    borderColor: '#b6e8b6',
+    borderBottomColor: '#7dc87d',
+  },
+  cardLost: {
+    backgroundColor: '#fff0f0',
+    borderColor: '#f5c0c0',
+    borderBottomColor: '#e08080',
   },
   cardRow: {
     flexDirection: 'row',

@@ -27,13 +27,14 @@ type ValidationResult = {
 
 export function WagerDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
-  const { fetchWagerById, loading } = useWager()
+  const { fetchWagerById, deleteWager, loading } = useWager()
   const insets = useSafeAreaInsets()
 
   const [wager, setWager] = useState<Wager | null>(null)
   const [evidenceFile, setEvidenceFile] = useState<EvidenceFile | null>(null)
   const [picking, setPicking] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [result, setResult] = useState<ValidationResult | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -76,6 +77,14 @@ export function WagerDetailScreen() {
     setEvidenceFile({ name, uri: asset.uri, mimeType: asset.mimeType ?? 'image/jpeg' })
     setResult(null)
     setSubmitError(null)
+  }
+
+  async function handleDelete() {
+    if (!wager) return
+    setDeleting(true)
+    const success = await deleteWager(wager.id)
+    setDeleting(false)
+    if (success) router.back()
   }
 
   async function handleSubmit() {
@@ -151,6 +160,17 @@ export function WagerDetailScreen() {
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
 
+        {wager.status === 'won' && (
+          <View style={[styles.statusBanner, styles.statusBannerWon]}>
+            <Text style={[styles.statusBannerText, styles.statusBannerTextWon]}>✓ Wager Won</Text>
+          </View>
+        )}
+        {wager.status === 'lost' && (
+          <View style={[styles.statusBanner, styles.statusBannerLost]}>
+            <Text style={[styles.statusBannerText, styles.statusBannerTextLost]}>✗ Wager Lost</Text>
+          </View>
+        )}
+
         <Text style={styles.title}>{wager.title}</Text>
 
         <View style={styles.amountBadge}>
@@ -179,73 +199,95 @@ export function WagerDetailScreen() {
           </View>
         </View>
 
-        <View style={styles.divider} />
+        {wager.status !== 'pending' && (
+          <>
+            <View style={styles.divider} />
 
-        <Text style={styles.evidenceHeading}>Submit Evidence</Text>
-        <Text style={styles.evidenceSubtext}>
-          Upload a photo, video, or document to prove you completed your wager.
-        </Text>
+            <TouchableOpacity
+              style={[styles.deleteButton, deleting && styles.buttonDisabled]}
+              onPress={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <ActivityIndicator color="#cc0000" />
+              ) : (
+                <Text style={styles.deleteButtonText}>Delete Wager</Text>
+              )}
+            </TouchableOpacity>
+          </>
+        )}
 
-        {evidenceFile ? (
-          <View style={styles.successBox}>
-            <Text style={styles.successIcon}>✓</Text>
-            <View style={styles.successTextBlock}>
-              <Text style={styles.successTitle}>File loaded successfully</Text>
-              <Text style={styles.successFile}>{evidenceFile.name}</Text>
-            </View>
-          </View>
-        ) : null}
+        {wager.status === 'pending' && (
+          <>
+            <View style={styles.divider} />
 
-        {result ? (
-          <View style={[styles.resultBox, result.approved ? styles.resultApproved : styles.resultRejected]}>
-            <Text style={[styles.resultHeading, result.approved ? styles.resultApprovedText : styles.resultRejectedText]}>
-              {result.approved ? '✓ Wager Won' : '✗ Wager Lost'}
+            <Text style={styles.evidenceHeading}>Submit Evidence</Text>
+            <Text style={styles.evidenceSubtext}>
+              Upload a photo, video, or document to prove you completed your wager.
             </Text>
-            <Text style={styles.resultReasoning}>{result.reasoning}</Text>
-          </View>
-        ) : null}
 
-        {submitError ? (
-          <Text style={styles.errorText}>{submitError}</Text>
-        ) : null}
+            {evidenceFile ? (
+              <View style={styles.successBox}>
+                <Text style={styles.successIcon}>✓</Text>
+                <View style={styles.successTextBlock}>
+                  <Text style={styles.successTitle}>File loaded successfully</Text>
+                  <Text style={styles.successFile}>{evidenceFile.name}</Text>
+                </View>
+              </View>
+            ) : null}
 
-        <View style={styles.buttonRow}>
-          <TouchableOpacity
-            style={[styles.button, styles.buttonFlex, (picking || submitting) && styles.buttonDisabled]}
-            onPress={handleChooseFile}
-            disabled={picking || submitting}
-          >
-            {picking ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <Text style={styles.buttonText}>
-                {evidenceFile ? 'Replace File' : 'Choose File'}
-              </Text>
-            )}
-          </TouchableOpacity>
+            {result ? (
+              <View style={[styles.resultBox, result.approved ? styles.resultApproved : styles.resultRejected]}>
+                <Text style={[styles.resultHeading, result.approved ? styles.resultApprovedText : styles.resultRejectedText]}>
+                  {result.approved ? '✓ Wager Won' : '✗ Wager Lost'}
+                </Text>
+                <Text style={styles.resultReasoning}>{result.reasoning}</Text>
+              </View>
+            ) : null}
 
-          <TouchableOpacity
-            style={[styles.button, styles.buttonFlex, submitting && styles.buttonDisabled]}
-            onPress={handleTakePhoto}
-            disabled={submitting}
-          >
-            <Text style={styles.buttonText}>Take Photo</Text>
-          </TouchableOpacity>
-        </View>
+            {submitError ? (
+              <Text style={styles.errorText}>{submitError}</Text>
+            ) : null}
 
-        {evidenceFile && !result ? (
-          <TouchableOpacity
-            style={[styles.submitButton, submitting && styles.buttonDisabled]}
-            onPress={handleSubmit}
-            disabled={submitting}
-          >
-            {submitting ? (
-              <ActivityIndicator color="#000000" />
-            ) : (
-              <Text style={styles.submitButtonText}>Submit Evidence</Text>
-            )}
-          </TouchableOpacity>
-        ) : null}
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.button, styles.buttonFlex, (picking || submitting) && styles.buttonDisabled]}
+                onPress={handleChooseFile}
+                disabled={picking || submitting}
+              >
+                {picking ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <Text style={styles.buttonText}>
+                    {evidenceFile ? 'Replace File' : 'Choose File'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, styles.buttonFlex, submitting && styles.buttonDisabled]}
+                onPress={handleTakePhoto}
+                disabled={submitting}
+              >
+                <Text style={styles.buttonText}>Take Photo</Text>
+              </TouchableOpacity>
+            </View>
+
+            {evidenceFile && !result ? (
+              <TouchableOpacity
+                style={[styles.submitButton, submitting && styles.buttonDisabled]}
+                onPress={handleSubmit}
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <ActivityIndicator color="#000000" />
+                ) : (
+                  <Text style={styles.submitButtonText}>Submit Evidence</Text>
+                )}
+              </TouchableOpacity>
+            ) : null}
+          </>
+        )}
       </ScrollView>
     </View>
   )
@@ -264,6 +306,32 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingHorizontal: 24,
+  },
+  statusBanner: {
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  statusBannerWon: {
+    backgroundColor: '#f0faf0',
+    borderColor: '#b6e8b6',
+  },
+  statusBannerLost: {
+    backgroundColor: '#fff0f0',
+    borderColor: '#f5c0c0',
+  },
+  statusBannerText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  statusBannerTextWon: {
+    color: '#2e7d32',
+  },
+  statusBannerTextLost: {
+    color: '#c62828',
   },
   backButton: {
     marginBottom: 20,
@@ -431,6 +499,18 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: '#000000',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deleteButton: {
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#cc0000',
+  },
+  deleteButtonText: {
+    color: '#cc0000',
     fontSize: 16,
     fontWeight: '600',
   },
